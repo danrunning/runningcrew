@@ -1,0 +1,36 @@
+name: running_crew
+description: A new Flutter project.
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.17.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.2
+  flutter_svg: ^2.0.9
+  kakao_flutter_sdk: ^1.9.2
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/fonts/
+    - assets/icons/
+    - assets/icons/login_image.png
+
+  fonts:
+    - family: Aleo
+      fonts:
+        - asset: assets/fonts/Aleo-VariableFont_wght.ttf
+    - family: Abhaya Libre
+      fonts:
+        - asset: assets/fonts/AbhayaLibre-ExtraBold.ttf

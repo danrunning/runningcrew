@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">running_crew_app</string>
+    <string name="kakao_app_key">db5ebeafb0496e3d199bb132fea34aca</string> <!-- 실제 네이티브 앱 키 -->
+    <string name="kakao_scheme">kakaodb5ebeafb0496e3d199bb132fea34aca</string> <!-- 실제 스키마 -->
+</resources>
