@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // PlatformException을 사용하기 위해 추가
-import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
-import 'package:running_crew/main.dart';
+import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart' as kakao;
+import 'package:running_crew/screens/personal_page.dart';
 import 'home_screen.dart'; // 홈 화면 파일을 import
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // 사용자 정보 저장을 위해 추가
 
 class LoginScreen extends StatelessWidget {
   @override
@@ -73,50 +75,86 @@ class LoginScreen extends StatelessWidget {
       ),
     );
   }
+
   void navigatorToMainPage(BuildContext context){
-        Navigator.of(context).pushReplacement(MaterialPageRoute(
-            builder: (context) => HomeScreen(),
-        ));
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (context) => HomeScreen(),
+    ));
   }
 
   Future<void> signInWithKaKao(BuildContext context) async {
-    if (await isKakaoTalkInstalled()) {
-      try {
-        await UserApi.instance.loginWithKakaoTalk().then((value) {
-          print('value from kakao $value');
-          navigatorToMainPage(context);
-        });
-        print('카카오톡으로 로그인 성공');
-
-      } catch (error) {
-        print('카카오톡으로 로그인 실패 $error');
-
-        // 사용자가 카카오톡 설치 후 디바이스 권한 요청 화면에서 로그인을 취소한 경우,
-        // 의도적인 로그인 취소로 보고 카카오계정으로 로그인 시도 없이 로그인 취소로 처리 (예: 뒤로 가기)
-        if (error is PlatformException && error.code == 'CANCELED') {
-          return;
-        }
-        // 카카오톡에 연결된 카카오계정이 없는 경우, 카카오계정으로 로그인
+    try {
+      kakao.OAuthToken token;
+      if (await kakao.isKakaoTalkInstalled()) {
         try {
-          await UserApi.instance.loginWithKakaoAccount().then((value) {
-            print('value from kakao $value');
-            navigatorToMainPage(context);
-          });
+          token = await kakao.UserApi.instance.loginWithKakaoTalk();
           print('카카오톡으로 로그인 성공');
         } catch (error) {
-          print('카카오계정으로 로그인 실패 $error');
+          print('카카오톡으로 로그인 실패 $error');
+
+          if (error is PlatformException && error.code == 'CANCELED') {
+            return;
+          }
+
+          token = await kakao.UserApi.instance.loginWithKakaoAccount();
+          print('카카오계정으로 로그인 성공');
+        }
+      } else {
+        token = await kakao.UserApi.instance.loginWithKakaoAccount();
+        print('카카오계정으로 로그인 성공');
+      }
+
+      var provider = OAuthProvider("oidc.runningcrew");
+      var credential = provider.credential(
+        idToken: token.idToken,
+        accessToken: token.accessToken,
+      );
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      kakao.User user;
+      try {
+        user = await kakao.UserApi.instance.me();
+      } catch (error) {
+        print('사용자 정보 요청 실패 $error');
+        return;
+      }
+
+      List<String> scopes = [];
+      if (user.kakaoAccount?.profileNeedsAgreement == true) {
+        scopes.add('profile');
+      }
+
+      if (scopes.isNotEmpty) {
+        print('사용자에게 추가 동의 받아야 하는 항목이 있습니다');
+        try {
+          token = await kakao.UserApi.instance.loginWithNewScopes(scopes);
+          print('현재 사용자가 동의한 동의항목: ${token.scopes}');
+        } catch (error) {
+          print('추가 동의 요청 실패 $error');
+          return;
+        }
+
+        try {
+          user = await kakao.UserApi.instance.me();
+          print('사용자 정보 요청 성공'
+              '\n회원번호: ${user.id}'
+              '\n닉네임: ${user.kakaoAccount?.profile?.nickname}'
+              '\n이메일: ${user.kakaoAccount?.email}');
+        } catch (error) {
+          print('사용자 정보 요청 실패 $error');
+          return;
         }
       }
-    } else {
-      try {
-        await UserApi.instance.loginWithKakaoAccount().then((value) {
-          print('value from kakao $value');
-          navigatorToMainPage(context);
-        });
-        print('카카오톡으로 로그인 성공');
-      } catch (error) {
-        print('카카오계정으로 로그인 실패 $error');
-      }
+
+      String? nickname = user.kakaoAccount?.profile?.nickname;
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('username', nickname ?? 'User_Name');
+      print('사용자 이름 저장 완료: $nickname');
+
+      navigatorToMainPage(context);
+    } catch (error) {
+      print('카카오계정으로 로그인 실패 $error');
     }
   }
 }

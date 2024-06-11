@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart'; // HomeScreen import 추가
 
@@ -34,9 +33,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadUserData() async {
     try {
-      User user = await UserApi.instance.me();
+      // SharedPreferences에서 저장된 사용자 이름을 가져오기
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? storedUserName = prefs.getString('username') ?? 'User_Name';
+
+      // 저장된 값 출력
+      print('Stored username: $storedUserName');
+
       setState(() {
-        userName = user.kakaoAccount?.profile?.nickname ?? 'User_Name';
+        userName = storedUserName;
       });
     } catch (error) {
       print('Failed to get user data: $error');

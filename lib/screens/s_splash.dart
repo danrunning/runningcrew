@@ -2,7 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import 's_login.dart'; // 로그인 화면 파일을 import
-
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
   KakaoSdk.init(nativeAppKey: '88e76129a9cf987cef8a6a93cd8fe0bb');
@@ -10,6 +11,17 @@ void main() async{
   // 키 해시를 가져와 출력합니다.
   String keyHash = await KakaoSdk.origin;
   print('키 해시: $keyHash');
+
+  // Firebase 초기화가 이미 수행되었는지 확인
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    if (e.toString().contains('A Firebase App named "[DEFAULT]" already exists')) {
+      // 이미 초기화된 경우 예외를 무시합니다.
+    } else {
+      rethrow;
+    }
+  }
   runApp(MyApp());
 }
 
