@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home_screen.dart'; // HomeScreen import 추가
-
 class ClubListPage extends StatelessWidget {
-  void _showConfirmationDialog(BuildContext context, int index) {
+  Future<void> _showConfirmationDialog(BuildContext context, int index) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? userName = prefs.getString('username');
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -21,7 +24,7 @@ class ClubListPage extends StatelessWidget {
                 Navigator.of(context).pop(); // 팝업 닫기
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ClubPage(index: index)), // 해당 클럽 페이지로 이동
+                  MaterialPageRoute(builder: (context) => ClubPage(index: index, userName: userName ?? 'User_Name')), // 사용자 이름을 전달
                 );
               },
               child: Text(
@@ -135,8 +138,9 @@ class ClubCard extends StatelessWidget {
 
 class ClubPage extends StatelessWidget {
   final int index;
+  final String userName;
 
-  ClubPage({required this.index});
+  ClubPage({required this.index, required this.userName});
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +192,7 @@ class ClubPage extends StatelessWidget {
       body: ListView(
         padding: EdgeInsets.all(16.0),
         children: [
-          ClubMemberCard(index: 0),
+          ClubMemberCard(index: 0, userName: userName),
           ClubMemberCard(index: 1),
           ClubMemberCard(index: 2),
           ClubMemberCard(index: 3),
@@ -204,8 +208,9 @@ class ClubPage extends StatelessWidget {
 
 class ClubMemberCard extends StatelessWidget {
   final int index;
+  final String? userName;
 
-  ClubMemberCard({required this.index});
+  ClubMemberCard({required this.index, this.userName});
 
   @override
   Widget build(BuildContext context) {
@@ -223,7 +228,10 @@ class ClubMemberCard extends StatelessWidget {
               color: Colors.black,
             ),
           ),
-          title: Text('멤버 ${index + 1}', style: TextStyle(color: Colors.black)),
+          title: Text(
+              index == 0 && userName != null ? userName! : '멤버 ${index + 1}',
+              style: TextStyle(color: Colors.black)
+          ),
         ),
       ),
     );

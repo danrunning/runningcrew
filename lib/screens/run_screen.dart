@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:geolocator/geolocator.dart';
 import 'on_end.dart'; // OnEndPage의 경로를 추가
 
 class RunScreen extends StatefulWidget {
@@ -11,20 +12,56 @@ class _RunScreenState extends State<RunScreen> {
   late Timer _timer;
   int _seconds = 0;
   double _distance = 0.0;
-  final double pacePerMinute = 6.0; // 1분당 6분/km를 가정
+  Position? _lastPosition;
+  final double weight = 70.0; // 사용자의 체중 (kg), 칼로리 계산에 사용
 
   @override
   void initState() {
     super.initState();
     _startTimer();
+    _startTracking();
   }
 
   void _startTimer() {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
         _seconds++;
-        // 매 초마다 pacePerMinute(분당 km)를 기준으로 거리를 증가시킵니다.
-        _distance += (1 / pacePerMinute) / 60; // 매 초당 거리 증가
+      });
+    });
+  }
+
+  void _startTracking() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return;
+    }
+
+    Geolocator.getPositionStream().listen((Position position) {
+      setState(() {
+        if (_lastPosition != null) {
+          _distance += Geolocator.distanceBetween(
+            _lastPosition!.latitude,
+            _lastPosition!.longitude,
+            position.latitude,
+            position.longitude,
+          ) / 1000; // meters to kilometers
+        }
+        _lastPosition = position;
       });
     });
   }
@@ -39,7 +76,7 @@ class _RunScreenState extends State<RunScreen> {
   Widget build(BuildContext context) {
     final int minutes = _seconds ~/ 60;
     final int remainingSeconds = _seconds % 60;
-    final double pace = _seconds > 0 ? (_seconds / 60) / _distance : 0.0;
+    final double pace = _distance > 0 ? _seconds / 60 / _distance : 0.0; // km per minute
 
     return Scaffold(
       backgroundColor: Colors.white, // 배경색을 흰색으로 변경
